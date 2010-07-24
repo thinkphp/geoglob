@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<table xmlns="http://query.yahooapis.com/v1/schema/table.xsd">
+  <meta>
+    <sampleQuery>select * from {table} where place="bucharest,ro"</sampleQuery>
+    <author>Adrian Statescu</author>
+    <description>Creates an badge of earth with a star at the location you defined. Return the HTML Element image with location data. If you provide a type parameter of "data" it returns the image as a data URI. If you set the location parameter to true you also get the information about the place.</description>
+  </meta>
+  <bindings>
+    <select>
+       <inputs>
+          <key id="place" type="xs:string" paramType="variable" required="true" />
+          <key id="type" type="xs:string" paramType="variable" required="false" />
+          <key id="location" type="xs:string" paramType="variable" required="false" />
+       </inputs>
+       <execute><![CDATA[
+           default xml namespace = "http://where.yahooapis.com/v1/schema.rng";
+
+           var res = y.query("select * from geo.places(1) where text='"+ place +"'").results; 
+           var lat = res.place.centroid.latitude,
+               lng = res.place.centroid.longitude; 
+               lat = Math.round(parseInt(lat)/5)*5,
+               lng = Math.round(parseInt(lng)/5)*5;
+ 
+           if(lat === +lat) {
+
+           var src = "http://earthquake.usgs.gov/images/globes/"+lat+"_"+lng+".jpg";
+
+               if(location === 'true') {
+
+                   var loc = <ul class="location">
+                                  <li><span>Name: </span> {res..name.text()}</li>
+                                  <li><span>Placetype: </span> {res..placeTypeName.text()}</li>
+                                  <li><span>Country: </span> {res..country.text()}</li>
+                                  <li><span>Latitude: </span> {res..centroid.latitude.text()}</li>
+                                  <li><span>Longitude: </span> {res..centroid.longitude.text()}</li>
+                                  <li><span>WOEID: </span> {res..woeid.text()}</li>
+                             </ul>; 
+               }
+
+               default xml namespace = "";
+
+               if(type === 'data') {
+                   var data = y.query("select * from data.uri where url='"+ src +"'").results;
+                   var datauri = data..url;
+                   var dataimg = <img/>;
+                       dataimg.@src = data..url;
+                       dataimg.@alt = place;     
+               }
+               var img = <img/>;
+                   img.@src = src;
+                   img.@alt = place; 
+               var out = (type === 'data') ? dataimg : img; 
+
+               response.object = <div class="glob">{out}{loc}</div>;
+
+            } else {
+
+               response.object = <error>No location found for {place}!</error>; 
+            } 
+               
+       ]]></execute>
+    </select>
+  </bindings>
+</table>
